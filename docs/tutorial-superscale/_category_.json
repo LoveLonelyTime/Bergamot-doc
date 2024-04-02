@@ -1,7 +1,8 @@
 {
-    "label": "教程 - 超标量基础",
+    "label": "教程 - Bergamot 超标量处理器设计",
     "position": 4,
     "link": {
-        "type": "generated-index"
+        "type": "generated-index",
+        "description": "了解 Bergamot 中与超标量处理器设计的相关概念."
     }
 }
