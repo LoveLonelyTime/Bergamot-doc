@@ -6,6 +6,8 @@ sidebar_position: 1
 
 5 分钟了解什么是 Bergamot.
 
+![Bergamot social card](/img/bergamot-social-card.png)
+
 ## 项目简介
 
 Bergamot 是一个基于 RV32GC 的超标量处理器实现.
