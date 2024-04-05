@@ -8,7 +8,7 @@ const FeatureList = [
     Svg: require('@site/static/img/riscv-color.svg').default,
     description: (
       <>
-        Bergamot 基于开放 <em>RISC-V 32GC(IMACFD)</em> 指令集, 打造通用 RISC-V 处理器, 采用 2-ways 多级并行流水线超标量结构, 支持指令动态调度.
+        Bergamot 基于开放 <em>RISC-V 32GC(IMACFD)</em> 指令集, 打造通用 RISC-V 处理器, 采用 2-way 多级并行流水线超标量结构, 支持指令动态调度.
       </>
     ),
   },

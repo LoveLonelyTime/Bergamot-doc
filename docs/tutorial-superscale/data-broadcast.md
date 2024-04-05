@@ -39,7 +39,7 @@ sidebar_position: 4
 
 Bergamot 通过调度算法, 每次从四个执行流水线(ALU, Branch, Memory, FPU) 中选择两个执行完毕的指令, 发送其数据广播.
 
-![Broadcast](./img/broadcast-sender.png)
+![Broadcast](./img/data-path.png)
 
 ## 数据广播项
 

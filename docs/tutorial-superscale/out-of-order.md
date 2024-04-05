@@ -16,6 +16,8 @@ sidebar_position: 5
 
 若同在一个队列的指令之间没有除数据依赖之外的依赖性, 那么可以发现, 当一个指令的源操作数都准备好之后, 该指令即可放入执行流水线中执行, 而不用等待队列前面的指令依次执行完毕, 在指令执行视角上来看, 指令不一定按照程序顺序执行, 这种动态的指令调度策略称为 **乱序执行** .
 
+![Instr out of order](./img/instr-out-of-order.png)
+
 这种动态调度策略可以形式化表示为将指令的依赖图按照拓扑顺序执行:
 
 ![Instr topo](./img/instr-topo.png)
@@ -26,11 +28,15 @@ sidebar_position: 5
 
 仍存在一个问题, 即同一队列中可能存在多个源操作数都准备好的指令, 我们该如何选择呢? 结论是, 我们应该选择最靠近队列头部的指令, 越靠近队列头部的指令在程序顺序中出现的越早, 可以发现 RAW 相关性依赖是一种前向依赖, 后面的指令的源操作数会依赖前面指令的结果, 因此越早执行最靠近队列头部的指令, 我们就能唤醒后面更多的指令.
 
+![Select instr](./img/select-instr.png)
+
 ## Bergamot 中的指令动态调度
 
 在 Bergamot 总共有四条执行流水线, 每条指令执行流水线都配备一个指令暂存队列, 这种架构称为独立指令暂存队列.
 
 Bergamot 总共有两种类型的指令暂存队列, 一种采用上文的乱序执行策略, 类名为 `OutOfOrderedExecuteQueue`, 另外一种采用顺序执行策略, 即永远处在队头的指令先执行, 类名为 `InOrderedExecuteQueue`.
+
+![Execute queue](./img/execute-queue.png)
 
 ### 乱序队列 OutOfOrderedExecuteQueue
 
