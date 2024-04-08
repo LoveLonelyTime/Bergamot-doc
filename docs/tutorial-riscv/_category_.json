@@ -1,0 +1,8 @@
+{
+    "label": "教程 - RISC-V 高级架构",
+    "position": 3,
+    "link": {
+        "type": "generated-index",
+        "description": "了解 RISC-V 指令集中的高级架构."
+    }
+}
