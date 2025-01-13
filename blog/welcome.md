@@ -10,3 +10,6 @@ tags: []
 Bergamot 是一个基于 RV32GC 的超标量处理器实现.
 
 ![Bergamot social card](/img/bergamot-social-card.png)
+
+`<!-- truncate -->`
+
