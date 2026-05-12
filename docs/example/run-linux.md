@@ -12,10 +12,15 @@ sidebar_position: 2
 
 在阅读本文之前，强烈推荐您通过 [运行 C 语言程序](docs/example/run-c-program.md) 来熟悉基本的 Bergamot 架构和仿真原理.
 
+## 从预构建的 `fw_payload.bin` 直接启动
 
-:::tip 仿真提示
-对于本实例, 运行仿真时间较长, 具体取决于主机性能. 为了屏蔽不必要的输出, 请将 `bergamot/core/retire/InstructionRetire.scala` 中的所有 `printf` 语句注释掉.
-:::
+如果您不想自己构建 linux 内核, 我们提供了预构建的 `fw_payload.bin`, 可以直接启动 linux.
+
+1. 进入 [Releases](https://github.com/LoveLonelyTime/Bergamot/releases) 页面, 下载预构建的 `fw_payload.bin`.
+2. 按照下面的步骤准备 `boot.hex` 和 `sim_dt.dtb`.
+3. 执行仿真命令 `./obj_dir/VVerilatorTestCore +Bfw_payload.bin +Dsim_dt.dtb`.
+
+运行将持续 15-30 分钟, 中间会输出 linux 内核日志, 最后 linux 将启动 `\init`, 预构建的 `fw_payload.bin` 将调用 `uname -a` 输出系统信息, 之后进入 `\bin\sh` BusyBox 终端.
 
 ## 构建 OpenSBI
 
@@ -48,8 +53,7 @@ cd opensbi
 设置交叉编译器:
 
 ```bash
-# 将 riscv64-linux-gnu- 修改为本地编译器路径
-export CROSS_COMPILE=riscv64-linux-gnu-
+export CROSS_COMPILE=riscv32-unknown-linux-gnu-
 export PLATFORM_RISCV_XLEN=32
 ```
 
@@ -125,8 +129,7 @@ cd linux
 设置内核编译选项:
 
 ```bash
-# 将 riscv64-linux- 修改为本地编译器路径
-make ARCH=riscv CROSS_COMPILE=riscv64-linux- menuconfig
+make ARCH=riscv CROSS_COMPILE=riscv32-unknown-linux-gnu- menuconfig
 ```
 
 建议将其剪裁到最小内核, 可以大大降低启动时间, 但是要保证 `Platform type>Base ISA=RV32I` 以及 `Platform type>FPU Support=False` (不使用FPU).
@@ -134,8 +137,7 @@ make ARCH=riscv CROSS_COMPILE=riscv64-linux- menuconfig
 最后编译构建内核:
 
 ```bash
-# 将 riscv64-linux- 修改为本地编译器路径
-make ARCH=riscv CROSS_COMPILE=riscv64-linux- Image
+make ARCH=riscv CROSS_COMPILE=riscv32-unknown-linux-gnu- Image
 ```
 
 最后将得到非压缩无格式内核镜像 `arch/riscv/boot/Image` .
@@ -163,15 +165,14 @@ make PLATFORM=generic FW_PAYLOAD_PATH=Image
 使用下面的命令配置和编译 BusyBox:
 
 ```bash
-# 将 riscv64-linux- 修改为本地编译器路径
-make ARCH=riscv CROSS_COMPILE=riscv64-linux- menuconfig
-make ARCH=riscv CROSS_COMPILE=riscv64-linux-
+make ARCH=riscv CROSS_COMPILE=riscv32-unknown-linux-gnu- menuconfig
+make ARCH=riscv CROSS_COMPILE=riscv32-unknown-linux-gnu-
 ```
 
 创建 `rootfs` 目录, 将 BusyBox 安装到该目录下面:
 
 ```bash
-make install ARCH=riscv CROSS_COMPILE=/home/jiahonghao/riscv/bin/riscv32-unknown-linux-gnu- CONFIG_PREFIX=./rootfs
+make install ARCH=riscv CROSS_COMPILE=riscv32-unknown-linux-gnu- CONFIG_PREFIX=./rootfs
 ```
 
 观察 `rootfs` 目录, 目录结构就是一个最基本的 Linux 根文件系统, 在 `bin` 目录下, 所有的常用命令都被链接到 `busybox` 一个可执行文件下.
@@ -180,8 +181,8 @@ make install ARCH=riscv CROSS_COMPILE=/home/jiahonghao/riscv/bin/riscv32-unknown
 
 ```bash
 cd dev
-sudo mknod console c 5 1
-sudo mknod null c 1 3
+mknod console c 5 1
+mknod null c 1 3
 ```
 
 您可能还需要拷贝库文件, 如果您不是静态链接的话. 另外您可能还需要编写一些 `etc` 配置文件.

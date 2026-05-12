@@ -16,27 +16,25 @@ sidebar_position: 1
 
 ### 安装 RISC-V GCC 交叉编译器
 
+:::tip Docker 镜像
+如果您使用了我们准备的 `bergamot-build` Docker 镜像, 则可以跳过此步骤.
+:::
+
 要想编译您的 C 的程序到 RISC-V 二进制可执行程序，您需要安装 RISC-V 官方为您提供的 RISC-V GCC 交叉编译器. 该项目的地址为 [riscv-gnu-toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain) .
 
 关于架构模型, 由于 Bergamot 目前使用 RV32 并且浮点 FPU 并不完善, 我们推荐您使用:
 
 ```shell
-./configure --prefix=/opt/riscv --with-arch=rv32gc --with-abi=ilp32 --enable-multilib
+./configure --prefix=/opt/riscv-toolchain --with-arch=rv32gc --with-abi=ilp32
 ```
 
-参数 `--prefix=/opt/riscv` 指明安装地址, `--with-arch=rv32gc` 指明我们使用 `rv32gc` 扩展, `--with-abi=ilp32` 适用于 32 位软浮点, `--enable-multilib` 包含软浮点库.
-
-:::tip 选择已编译的二进制版本
-
-编译 `riscv-gnu-toolchain` 需要下载很多相关依赖, 这些依赖通常体积非常大且编译耗时长, 您可以直接使用 bootlin 提供的已编译的二进制版本 [bootlin](https://toolchains.bootlin.com/) .
-
-:::
+参数 `--prefix=/opt/riscv-toolchain` 指明安装地址, `--with-arch=rv32gc` 指明我们使用 `rv32gc` 扩展, `--with-abi=ilp32` 适用于 32 位软浮点.
 
 ## 编译 Bootloader 启动程序
 
 对于测试核心 `VerilatorTestCore` 的启动地址为 `hffff0000`, 该地址正好处于 ROM , 测试核心将在这里首先启动 Bootloader 程序, 这在以下代码中配置:
 
-```scala title="src/main/scala/bergamot/export/VerilatorTestCore.scala"
+```scala title="src/main/scala/bergamot/exporter/VerilatorTestCore.scala"
 private class VerilatorTestCore extends Module {
   private val config = CoreConfig.default.copy(pcInit = "hffff0000")
   // ...
@@ -45,7 +43,7 @@ private class VerilatorTestCore extends Module {
 
 对于测试核心的地址映射, 在下面的代码文件中进行配置:
 
-```scala title="src/main/scala/bergamot/export/VerilatorTestCore.scala"
+```scala title="src/main/scala/bergamot/exporter/VerilatorTestCore.scala"
 private val interconnect = Module(
   new AXIInterconnect(
     Seq(
@@ -90,7 +88,7 @@ jalr ra, 0(a0) /* Go */
 
 现在, 编写您的测试 C 语言测试程序, 下面是一个简单的例子:
 
-```c
+```c title="main.c"
 void main()
 {
     int *out = (int *)0x80010000;
@@ -110,7 +108,7 @@ void main()
 
 因为我们编写的是裸机程序, 编译器无法定位 `main` 方法, 我们需要手动编写入口程序:
 
-```asm
+```asm title="main.S"
 .text
 .globl	_start
 
@@ -121,7 +119,7 @@ j main
 
 该代码设置栈的地址为 `0x80011000` , 设置栈是必须的, 否则我们将无法调用 C 语言函数. 最后我们需要编写链接器脚本, 告诉编译器如何编排内存布局:
 
-```lds
+```lds title="main.lds"
 OUTPUT_ARCH("riscv")
 OUTPUT_FORMAT("elf32-littleriscv")
 
@@ -139,10 +137,10 @@ SECTIONS {
 最后使用 `gcc` 命令编译:
 
 ```shell
-riscv32-unknown-linux-gnu-gcc -march=rv32gc -mabi=ilp32 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Ttest.lds load.s acc.c -o acc
+riscv32-unknown-linux-gnu-gcc -march=rv32gc -mabi=ilp32 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Tmain.lds main.S main.c -o main
 ```
 
-其中 `test.lds` 为链接器脚本, `load.s` 是启动入口程序, `acc.c` 是我们编写的 C 语言源文件, 最后您将得到 `acc` 文件说明一切进展顺利.
+其中 `main.lds` 为链接器脚本, `main.S` 是启动入口程序, `main.c` 是我们编写的 C 语言源文件, 最后您将得到二进制 `main` 文件说明一切进展顺利.
 
 :::warning 使用全局变量
 
@@ -150,16 +148,16 @@ riscv32-unknown-linux-gnu-gcc -march=rv32gc -mabi=ilp32 -static -mcmodel=medany 
 
 :::
 
-最后, 我们得到的 `acc` 文件的二进制格式为 `elf`, 但这并不是我们想要的, `VerilatorTestCore` 需要的是原始二进制格式, 其将会把该文件的内容按照 **二进制** 原封不动的加载进内存 `0x80000000` 处. 在那之前, 您可以通过反编译查看我们的 `acc` 文件结果是否正确:
+最后, 我们得到的 `main` 文件的二进制格式为 `elf`, 但这并不是我们想要的, `VerilatorTestCore` 需要的是原始二进制格式, 其将会把该文件的内容按照 **二进制** 原封不动的加载进内存 `0x80000000` 处. 在那之前, 您可以通过反编译查看我们的 `main` 文件结果是否正确:
 
 ```shell
-riscv32-unknown-linux-gnu-objdump -d acc > acc.txt
+riscv32-unknown-linux-gnu-objdump -d main > main.txt
 ```
 
-这是我生成的部分代码, 其中每一行指明了指令在内存中的地址, 以及二进制指令码, 最后是反编译的结果:
+这是生成的部分代码, 其中每一行指明了指令在内存中的地址, 以及二进制指令码, 最后是反编译的结果:
 
-```plain
-test:     file format elf32-littleriscv
+```plain title="main.txt"
+main:     file format elf32-littleriscv
 
 Disassembly of section .text:
 
@@ -178,14 +176,14 @@ Disassembly of section .text:
 现在通过下面的命令, 导出 `elf` 文件中的 `text` 段到二进制文件中:
 
 ```shell
-riscv32-unknown-linux-gnu-objcopy -O binary -j .text acc acc.bin
+riscv32-unknown-linux-gnu-objcopy -O binary -j .text main main.bin
 ```
 
-得到了 `acc.bin` 文件, 可以通过二进制工具打开, 该文件的第一个 4 字节应该是 `80011137` 对应我们第一条指令. 将该文件复制到 `simulator` 文件夹中, 现在 `simulator` 的内容应该有:
+得到了 `main.bin` 文件, 可以通过二进制工具打开, 该文件的第一个 4 字节应该是 `80011137` 对应我们第一条指令. 将该文件复制到 `simulator` 文件夹中, 现在 `simulator` 的内容应该有:
 
 ```plain
 boot.hex -- ROM Bootloader 程序
-acc.bin -- RISC-V 测试程序
+main.bin -- RISC-V 测试程序
 obj_dir/VVerilatorTestCore -- VerilatorTestCore 测试程序
 ```
 
@@ -194,7 +192,13 @@ obj_dir/VVerilatorTestCore -- VerilatorTestCore 测试程序
 在 `simulator` 文件夹下, 运行下面的命令:
 
 ```shell
-./obj_dir/VVerilatorTestCore +trace +Bacc.bin +T10000
+./obj_dir/VVerilatorTestCore +trace +Bmain.bin +T10000
 ```
 
-可以看到控制台会飞速打印我们的运行日志, 运行到 10000 周期后程序退出. 程序退出后会将最后的内存导出到 `mem.bin` 文件中, 使用二进制编辑器打开, 检查地址 `0x80010000` 的值, 若是 55 说明我们的程序运行成功. 另外在文件 `logs/vlt_dump.vcd` 会以 VCD 格式导出波形图方便您调试.
+可以看到控制台会飞速打印我们的运行日志, 运行到 10000 周期后程序退出. 程序退出后会将最后的内存导出到 `mem.bin` 文件中, 使用二进制编辑器打开或者执行下面的命令, 检查内存地址 `0x80010000` 的值 (文件偏移 `0x10000`), 若是 55 (十六进制 37)说明我们的程序运行成功.
+
+```shell
+xxd -s 0x10000 -l 1 mem.bin
+```
+
+另外在文件 `logs/vlt_dump.vcd` 会以 VCD 格式导出波形图方便您调试.
